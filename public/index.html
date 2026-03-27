@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendar Drop</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f11;
+      color: #e8e8ed;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 32px;
+      font-size: 0.95rem;
+    }
+
+    #auth-banner {
+      background: #1e1b2e;
+      border: 1px solid #4f3fb7;
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.9rem;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    #auth-banner a {
+      color: #7c6bff;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    #auth-banner a:hover { text-decoration: underline; }
+
+    .authed-badge {
+      background: #1a2e1a;
+      border-color: #2a6b2a !important;
+      color: #5aba5a;
+    }
+
+    .drop-zone {
+      width: 100%;
+      max-width: 640px;
+      background: #1a1a1f;
+      border: 2px dashed #333;
+      border-radius: 20px;
+      padding: 48px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .drop-zone.drag-over {
+      border-color: #7c6bff;
+      background: #1c1a2e;
+      transform: scale(1.01);
+    }
+
+    .drop-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .drop-zone h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .drop-zone p {
+      color: #666;
+      font-size: 0.875rem;
+      margin-bottom: 24px;
+    }
+
+    #file-input { display: none; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #7c6bff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn:hover { background: #6a59e8; }
+    .btn:disabled { background: #444; cursor: not-allowed; }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #444;
+      color: #ccc;
+    }
+
+    .btn-outline:hover { border-color: #7c6bff; color: #7c6bff; background: transparent; }
+
+    .btn-green { background: #2a7a2a; }
+    .btn-green:hover { background: #236023; }
+
+    textarea {
+      width: 100%;
+      background: #111114;
+      border: 1px solid #2a2a30;
+      border-radius: 12px;
+      color: #e8e8ed;
+      font-size: 0.9rem;
+      font-family: inherit;
+      padding: 14px;
+      resize: vertical;
+      outline: none;
+      margin-top: 20px;
+      min-height: 100px;
+      transition: border-color 0.15s;
+    }
+
+    textarea:focus { border-color: #7c6bff; }
+    textarea::placeholder { color: #444; }
+
+    #preview-files {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+      justify-content: center;
+    }
+
+    .file-chip {
+      background: #222228;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .file-chip img {
+      width: 32px;
+      height: 32px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .file-chip button {
+      background: none;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .file-chip button:hover { color: #ff6b6b; }
+
+    #submit-btn {
+      width: 100%;
+      max-width: 640px;
+      margin-top: 16px;
+      padding: 14px;
+      font-size: 1rem;
+      border-radius: 12px;
+      justify-content: center;
+    }
+
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 32px;
+      color: #888;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #333;
+      border-top-color: #7c6bff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #results {
+      width: 100%;
+      max-width: 640px;
+      margin-top: 24px;
+    }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .results-header h3 { font-size: 1rem; font-weight: 600; }
+
+    .event-card {
+      background: #1a1a1f;
+      border: 1px solid #2a2a30;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 10px;
+      transition: border-color 0.15s;
+    }
+
+    .event-card:hover { border-color: #7c6bff44; }
+
+    .event-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .event-title {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .event-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .meta-chip {
+      background: #222228;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.78rem;
+      color: #aaa;
+    }
+
+    .event-desc {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: #888;
+    }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      color: #555;
+      cursor: pointer;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      padding: 0;
+    }
+
+    .remove-btn:hover { color: #ff6b6b; }
+
+    #confirm-btn {
+      width: 100%;
+      margin-top: 16px;
+      padding: 14px;
+      font-size: 1rem;
+      border-radius: 12px;
+      justify-content: center;
+    }
+
+    #success-msg {
+      display: none;
+      background: #1a2e1a;
+      border: 1px solid #2a6b2a;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin-top: 24px;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    #success-msg h3 { color: #5aba5a; margin-bottom: 8px; }
+    #success-msg p { color: #888; font-size: 0.875rem; }
+
+    #error-msg {
+      display: none;
+      background: #2e1a1a;
+      border: 1px solid #6b2a2a;
+      border-radius: 12px;
+      padding: 16px;
+      color: #ff8080;
+      font-size: 0.875rem;
+      margin-top: 16px;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    #reset-btn {
+      display: none;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Calendar Drop</h1>
+  <p class="subtitle">Drop anything in — AI extracts events and adds them to Google Calendar</p>
+
+  <div id="auth-banner">
+    <span>🔐</span>
+    <span id="auth-text">Not connected to Google Calendar. <a href="/auth">Connect now →</a></span>
+  </div>
+
+  <div class="drop-zone" id="drop-zone">
+    <span class="drop-icon">📅</span>
+    <h2>Drop files or paste text</h2>
+    <p>Screenshots, invites, photos of flyers, emails — anything with event info</p>
+    <button class="btn btn-outline" onclick="document.getElementById('file-input').click()">
+      Browse files
+    </button>
+    <input type="file" id="file-input" multiple accept="image/*,.pdf,.txt" />
+    <textarea id="text-input" placeholder="Or paste text here — emails, notes, schedules..."></textarea>
+    <div id="preview-files"></div>
+  </div>
+
+  <button class="btn" id="submit-btn" disabled onclick="handleSubmit()">
+    Analyze with AI
+  </button>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Analyzing content...</p>
+  </div>
+
+  <div id="error-msg"></div>
+
+  <div id="results" style="display:none">
+    <div class="results-header">
+      <h3 id="results-title">Found events</h3>
+    </div>
+    <div id="event-list"></div>
+    <button class="btn btn-green" id="confirm-btn" onclick="handleCreate()">
+      Add all to Google Calendar
+    </button>
+  </div>
+
+  <div id="success-msg">
+    <h3>Added to Calendar!</h3>
+    <p id="success-detail"></p>
+  </div>
+
+  <button class="btn btn-outline" id="reset-btn" onclick="resetApp()">Start over</button>
+
+  <script>
+    let selectedFiles = [];
+    let parsedEvents = [];
+
+    // Check auth status
+    fetch('/auth/status')
+      .then(r => r.json())
+      .then(({ authed }) => {
+        const banner = document.getElementById('auth-banner');
+        const text = document.getElementById('auth-text');
+        if (authed) {
+          banner.className = 'authed-badge';
+          banner.innerHTML = '<span>✅</span><span>Connected to Google Calendar</span>';
+        }
+      });
+
+    // Check authed param on return from OAuth
+    if (new URLSearchParams(location.search).get('authed')) {
+      history.replaceState({}, '', '/');
+    }
+
+    // Drag and drop
+    const dropZone = document.getElementById('drop-zone');
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      addFiles(Array.from(e.dataTransfer.files));
+    });
+
+    document.getElementById('file-input').addEventListener('change', e => {
+      addFiles(Array.from(e.target.files));
+    });
+
+    document.getElementById('text-input').addEventListener('input', updateSubmitBtn);
+
+    function addFiles(files) {
+      files.forEach(file => {
+        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+          selectedFiles.push(file);
+        }
+      });
+      renderFilePreviews();
+      updateSubmitBtn();
+    }
+
+    function renderFilePreviews() {
+      const container = document.getElementById('preview-files');
+      container.innerHTML = '';
+      selectedFiles.forEach((file, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'file-chip';
+        if (file.type.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(file);
+          chip.appendChild(img);
+        } else {
+          chip.appendChild(Object.assign(document.createElement('span'), { textContent: '📄' }));
+        }
+        chip.appendChild(Object.assign(document.createElement('span'), { textContent: file.name }));
+        const btn = document.createElement('button');
+        btn.textContent = '×';
+        btn.onclick = () => { selectedFiles.splice(i, 1); renderFilePreviews(); updateSubmitBtn(); };
+        chip.appendChild(btn);
+        container.appendChild(chip);
+      });
+    }
+
+    function updateSubmitBtn() {
+      const hasText = document.getElementById('text-input').value.trim().length > 0;
+      document.getElementById('submit-btn').disabled = !hasText && selectedFiles.length === 0;
+    }
+
+    async function handleSubmit() {
+      const text = document.getElementById('text-input').value.trim();
+      const formData = new FormData();
+      if (text) formData.append('text', text);
+      selectedFiles.forEach(f => formData.append('files', f));
+
+      document.getElementById('submit-btn').style.display = 'none';
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('error-msg').style.display = 'none';
+
+      try {
+        const res = await fetch('/parse', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to parse');
+        parsedEvents = data.events;
+        renderEvents();
+      } catch (err) {
+        showError(err.message);
+        document.getElementById('submit-btn').style.display = 'flex';
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+
+    function renderEvents() {
+      const container = document.getElementById('event-list');
+      container.innerHTML = '';
+
+      parsedEvents.forEach((event, i) => {
+        const card = document.createElement('div');
+        card.className = 'event-card';
+
+        const header = document.createElement('div');
+        header.className = 'event-card-header';
+
+        const title = document.createElement('div');
+        title.className = 'event-title';
+        title.textContent = event.title;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = '×';
+        removeBtn.onclick = () => {
+          parsedEvents.splice(i, 1);
+          if (parsedEvents.length === 0) document.getElementById('results').style.display = 'none';
+          else renderEvents();
+        };
+
+        header.appendChild(title);
+        header.appendChild(removeBtn);
+
+        const meta = document.createElement('div');
+        meta.className = 'event-meta';
+
+        const chips = [
+          event.date,
+          event.startTime ? `${event.startTime}${event.endTime ? ' – ' + event.endTime : ''}` : 'All day',
+          event.location,
+        ].filter(Boolean);
+
+        chips.forEach(text => {
+          const chip = document.createElement('span');
+          chip.className = 'meta-chip';
+          chip.textContent = text;
+          meta.appendChild(chip);
+        });
+
+        card.appendChild(header);
+        card.appendChild(meta);
+
+        if (event.description) {
+          const desc = document.createElement('div');
+          desc.className = 'event-desc';
+          desc.textContent = event.description;
+          card.appendChild(desc);
+        }
+
+        container.appendChild(card);
+      });
+
+      const title = parsedEvents.length === 1 ? '1 event found' : `${parsedEvents.length} events found`;
+      document.getElementById('results-title').textContent = title;
+      document.getElementById('results').style.display = 'block';
+    }
+
+    async function handleCreate() {
+      const btn = document.getElementById('confirm-btn');
+      btn.disabled = true;
+      btn.textContent = 'Adding to calendar...';
+      document.getElementById('error-msg').style.display = 'none';
+
+      try {
+        const res = await fetch('/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ events: parsedEvents }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (res.status === 401) throw new Error('Not connected to Google Calendar. Click "Connect now" at the top.');
+          throw new Error(data.error || 'Failed to create events');
+        }
+        document.getElementById('results').style.display = 'none';
+        const successEl = document.getElementById('success-msg');
+        successEl.style.display = 'block';
+        document.getElementById('success-detail').textContent =
+          `${data.created.length} event${data.created.length !== 1 ? 's' : ''} added to your Google Calendar.`;
+        document.getElementById('reset-btn').style.display = 'inline-flex';
+      } catch (err) {
+        showError(err.message);
+        btn.disabled = false;
+        btn.textContent = 'Add all to Google Calendar';
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = '⚠️ ' + msg;
+      el.style.display = 'block';
+    }
+
+    function resetApp() {
+      selectedFiles = [];
+      parsedEvents = [];
+      document.getElementById('text-input').value = '';
+      document.getElementById('preview-files').innerHTML = '';
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('success-msg').style.display = 'none';
+      document.getElementById('error-msg').style.display = 'none';
+      document.getElementById('reset-btn').style.display = 'none';
+      document.getElementById('submit-btn').style.display = 'flex';
+      document.getElementById('submit-btn').disabled = true;
+    }
+  </script>
+</body>
+</html>
